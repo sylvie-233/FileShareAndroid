@@ -1,0 +1,219 @@
+name: Android CI / Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '发布 tag（例如 v1.0.0）'
+        required: true
+        default: 'v1.0.0'
+        type: string
+      publish:
+        description: '创建 / 更新 GitHub Release'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0'
+
+      - name: Accept Android licenses
+        run: |
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+
+      - name: Use official Gradle distribution on CI
+        run: |
+          sed -i 's#mirrors\.cloud\.tencent\.com/gradle/#services.gradle.org/distributions/#' gradle/wrapper/gradle-wrapper.properties
+          sed -i 's#mirrors\.huaweicloud\.com/gradle/#services.gradle.org/distributions/#' gradle/wrapper/gradle-wrapper.properties
+          sed -i 's#mirrors\.aliyun\.com/macports/distfiles/gradle/#services.gradle.org/distributions/#' gradle/wrapper/gradle-wrapper.properties
+          sed -i 's#-all\.zip#-bin.zip#' gradle/wrapper/gradle-wrapper.properties
+          chmod +x gradlew
+          if ! grep -q 'services.gradle.org' gradle/wrapper/gradle-wrapper.properties; then
+            echo "::error::gradle-wrapper.properties 镜像地址无法切换到官方分发，请同步更新 workflow"
+            exit 1
+          fi
+          grep distributionUrl gradle/wrapper/gradle-wrapper.properties
+
+      - name: Detect signing secrets
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::未配置 RELEASE_KEYSTORE_BASE64，发布包将使用 debug 签名"
+          fi
+
+      - name: Decode signing keystore
+        if: steps.signing.outputs.has == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::签名 Secret 不完整，请配置 RELEASE_KEYSTORE_PASSWORD / RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          {
+            echo "FILESHARE_KEYSTORE_PATH=$RUNNER_TEMP/release.jks"
+            echo "FILESHARE_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "FILESHARE_KEY_ALIAS=$KEY_ALIAS"
+            echo "FILESHARE_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Resolve version
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_PUBLISH: ${{ inputs.publish }}
+        run: |
+          TAG=""
+          RELEASE="false"
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+            RELEASE="true"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_TAG"
+            RELEASE="$INPUT_PUBLISH"
+          fi
+
+          if [ "$RELEASE" = "true" ] && [ -z "$TAG" ]; then
+            echo "::error::发布 Release 需要填写 tag"
+            exit 1
+          fi
+
+          if [ -n "$TAG" ] && ! [[ "$TAG" =~ ^v[0-9][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::tag 格式应为 v1.0.0 或 v1.0.0-beta.1"
+            exit 1
+          fi
+
+          VERSION=""
+          VERSION_CODE=""
+          if [ -n "$TAG" ]; then
+            VERSION="${TAG#v}"
+            CORE_VERSION="${VERSION%%-*}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CORE_VERSION"
+            MAJOR="${MAJOR//[^0-9]/}"; MAJOR="${MAJOR:-0}"
+            MINOR="${MINOR//[^0-9]/}"; MINOR="${MINOR:-0}"
+            PATCH="${PATCH//[^0-9]/}"; PATCH="${PATCH:-0}"
+            VERSION_CODE=$((10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH))
+          fi
+
+          {
+            echo "tag=$TAG"
+            echo "version=$VERSION"
+            echo "version_code=$VERSION_CODE"
+            echo "release=$RELEASE"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Build APK
+        id: build
+        env:
+          RELEASE: ${{ steps.meta.outputs.release }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          HAS_KEYSTORE: ${{ steps.signing.outputs.has }}
+        run: |
+          PROPS=()
+          if [ -n "$VERSION" ]; then
+            PROPS+=("-Pfileshare.versionName=$VERSION" "-Pfileshare.versionCode=$VERSION_CODE")
+          fi
+
+          if [ "$RELEASE" = "true" ] && [ "$HAS_KEYSTORE" = "true" ]; then
+            ./gradlew :app:assembleRelease "${PROPS[@]}" --stacktrace
+            APK="app/build/outputs/apk/release/app-release.apk"
+            NAME="FileShare-${VERSION}.apk"
+            VARIANT="release (signed)"
+          else
+            ./gradlew :app:assembleDebug "${PROPS[@]}" --stacktrace
+            APK="app/build/outputs/apk/debug/app-debug.apk"
+            if [ "$RELEASE" = "true" ]; then
+              NAME="FileShare-${VERSION}-debug.apk"
+            else
+              NAME="FileShare-ci-${GITHUB_SHA::7}.apk"
+            fi
+            VARIANT="debug"
+          fi
+
+          cp "$APK" "$NAME"
+          {
+            echo "apk=$NAME"
+            echo "variant=$VARIANT"
+          } >> "$GITHUB_OUTPUT"
+          ls -lh "$NAME"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build.outputs.apk }}
+          path: ${{ steps.build.outputs.apk }}
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: steps.meta.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: FileShare ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: ${{ steps.build.outputs.apk }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          prerelease: ${{ contains(steps.meta.outputs.version, '-') }}
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Write job summary
+        run: |
+          {
+            echo "## FileShare 构建完成"
+            echo ""
+            echo "- Tag: \`${{ steps.meta.outputs.tag || '—' }}\`"
+            echo "- Variant: ${{ steps.build.outputs.variant }}"
+            echo "- APK: \`${{ steps.build.outputs.apk }}\`"
+            echo "- Release: ${{ steps.meta.outputs.release }}"
+          } >> "$GITHUB_STEP_SUMMARY"

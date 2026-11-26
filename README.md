@@ -1,5 +1,7 @@
 # FileShare · 局域网文件共享
 
+[![Android CI](https://github.com/sylvie-233/FileShareAndroid/actions/workflows/android-release.yml/badge.svg)](https://github.com/sylvie-233/FileShareAndroid/actions/workflows/android-release.yml)
+
 > Android 一键开启局域网文件共享：手机内嵌 HTTP 服务，同一 Wi-Fi 下任何设备用浏览器上传 / 下载，文件只留在本机。
 > Kotlin + Jetpack Compose + Ktor + Koin，多模块工程。
 
@@ -68,10 +70,18 @@ APK 输出：`app/build/outputs/apk/debug/app-debug.apk`。
 
 环境配置、镜像与常见问题见 [app/README.md](app/README.md)。
 
+### 自动构建与发布
+
+- 推送 tag（如 `git tag v1.0.0 && git push origin v1.0.0`）会运行测试、构建 APK 并创建 GitHub Release。
+- 也可以在 Actions 页面手动运行 **Android CI / Release**，填写 tag 并选择是否创建 Release；取消勾选时只上传构建产物。
+- 分支 / PR 只做测试与 debug APK 构建，不发布。
+- 配置签名 Secret 后发布签名版 APK，否则回退为 debug 签名 APK。Secret 配置步骤见 [app/README.md](app/README.md#github-actions)。
+
 ## 项目结构
 
 ```text
 FileShareAndroid
+├─ .github/                 GitHub Actions（CI / Release）
 ├─ app/                     Application、MainActivity、三 Tab 导航、Manifest 与 Web 资源
 ├─ build-logic/             Gradle 约定插件
 ├─ core/

@@ -1,14 +1,15 @@
 package com.fileshare.lan.core.common
 
 /** 文件类型色系，用于列表徽章配色。 */
-enum class FileTone { DOC, IMAGE, VIDEO, AUDIO, ARCHIVE, CODE, OTHER }
+enum class FileTone { DOC, IMAGE, VIDEO, AUDIO, ARCHIVE, APK, CODE, OTHER }
 
 private val TONES = mapOf(
     FileTone.DOC to setOf("doc", "docx", "pdf", "txt", "md", "rtf", "xls", "xlsx", "ppt", "pptx", "csv"),
     FileTone.IMAGE to setOf("png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic", "ico"),
     FileTone.VIDEO to setOf("mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "3gp"),
     FileTone.AUDIO to setOf("mp3", "wav", "flac", "aac", "ogg", "m4a", "opus"),
-    FileTone.ARCHIVE to setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz", "apk"),
+    FileTone.ARCHIVE to setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz"),
+    FileTone.APK to setOf("apk"),
     FileTone.CODE to setOf("kt", "java", "js", "ts", "html", "css", "json", "xml", "py", "go", "rs", "sh"),
 )
 

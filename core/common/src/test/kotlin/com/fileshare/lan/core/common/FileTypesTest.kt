@@ -19,7 +19,8 @@ class FileTypesTest {
         assertEquals(FileTone.IMAGE, fileTone("photo.JPG"))
         assertEquals(FileTone.VIDEO, fileTone("movie.mp4"))
         assertEquals(FileTone.AUDIO, fileTone("song.flac"))
-        assertEquals(FileTone.ARCHIVE, fileTone("app.apk"))
+        assertEquals(FileTone.ARCHIVE, fileTone("backup.zip"))
+        assertEquals(FileTone.APK, fileTone("app.apk"))
         assertEquals(FileTone.CODE, fileTone("Main.kt"))
         assertEquals(FileTone.OTHER, fileTone("unknown.xyz"))
     }

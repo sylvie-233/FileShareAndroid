@@ -132,11 +132,13 @@ class ShareServer(
                 get("/server-info") {
                     val ip = lanIpProvider() ?: ""
                     val port = runningPort
+                    val settings = settingsRepository.current()
                     call.respond(
                         ServerInfoDto(
                             serverUrl = "http://$ip:$port",
                             ip = ip,
                             port = port,
+                            allowUpload = settings.allowUpload,
                         ),
                     )
                 }

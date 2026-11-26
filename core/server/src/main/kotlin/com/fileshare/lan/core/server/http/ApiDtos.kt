@@ -13,6 +13,7 @@ data class ServerInfoDto(
     val ip: String,
     val port: Int,
     val version: String = ServerVersion.VERSION,
+    @SerialName("allow_upload") val allowUpload: Boolean = true,
 )
 
 @Serializable

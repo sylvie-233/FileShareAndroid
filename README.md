@@ -14,7 +14,7 @@
 | 传输配置 | 端口（8080/8000/9090）、单文件大小上限、允许上传开关、SAF 自定义保存目录 |
 | 系统适配 | SAF 持久化授权、所有文件访问权限、忽略电池优化、Android 13+ 通知权限 |
 
-浏览器端页面（`app/src/main/assets/web/`）沿用 FileShareTs 的静态页面，接口契约保持一致。
+浏览器端页面（`app/src/main/assets/web/`）沿用 FileShareTs 的静态页面，接口契约保持一致。关闭「允许其他设备上传」后，页面会自动隐藏上传区域并提示仅可下载（服务端 403 兜底）。
 
 ## 技术栈
 
@@ -68,7 +68,7 @@ build-logic/             # Gradle 约定插件（application / library / compose
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/server-info` | `{ server_url, ip, port, version }` |
+| GET | `/server-info` | `{ server_url, ip, port, version, allow_upload }` |
 | GET | `/files?q=&page=&size=` | `{ files: [{ name, size, modified }], total, page, size }`（`modified` 为 Unix 秒） |
 | POST | `/upload` | multipart 字段 `file`，流式写盘，超出限额返回 413 |
 | GET | `/download/{filename}` | 下载，`Content-Disposition` 按 RFC 5987 编码中文名 |

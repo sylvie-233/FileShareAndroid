@@ -264,6 +264,33 @@
             display: none;
         }
 
+        .upload-disabled {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: var(--muted);
+        }
+
+        .upload-disabled .disabled-icon {
+            width: 20px;
+            height: 20px;
+            flex: none;
+            margin-top: 1px;
+        }
+
+        .upload-disabled-title {
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .upload-disabled-hint {
+            margin-top: 4px;
+            font-size: 12.5px;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
         .progress-container {
             display: none;
             margin-top: 14px;
@@ -892,7 +919,7 @@
             </div>
         </section>
 
-        <section class="card upload-card">
+        <section class="card upload-card" id="uploadCard">
             <label class="drop-zone" id="dropZone">
                 <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                 <span class="drop-title">拖拽文件到这里上传</span>
@@ -905,6 +932,14 @@
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <div class="progress-text" id="progressText">上传中…</div>
+            </div>
+        </section>
+
+        <section class="card upload-disabled" id="uploadDisabled" hidden>
+            <svg class="disabled-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <div>
+                <div class="upload-disabled-title">上传功能已关闭</div>
+                <div class="upload-disabled-hint">当前仅支持下载文件。如需上传，请在手机 App 的设置中开启「允许其他设备上传」后刷新本页。</div>
             </div>
         </section>
 
@@ -998,16 +1033,35 @@
         let serverUrlPromise = null;
         let searchTimer = null;
         let notificationTimer = null;
+        let uploadAllowed = true;
 
-        /** 获取服务器实际 URL，只请求一次。 */
+        /** 获取服务器实际 URL，只请求一次；同时读取是否允许上传。 */
         function getServerUrl() {
             if (!serverUrlPromise) {
-                serverUrlPromise = fetch('/api/v1/server-info')
+                serverUrlPromise = fetch('/api/v1/server-info', { cache: 'no-store' })
                     .then((response) => response.json())
-                    .then((data) => data.server_url || window.location.origin)
+                    .then((data) => {
+                        if (data && typeof data.allow_upload === 'boolean') {
+                            applyUploadPermission(data.allow_upload);
+                        }
+                        return data.server_url || window.location.origin;
+                    })
                     .catch(() => window.location.origin);
             }
             return serverUrlPromise;
+        }
+
+        /** 根据服务端配置切换上传区域与「已关闭」提示。 */
+        function applyUploadPermission(allow) {
+            uploadAllowed = Boolean(allow);
+            const card = document.getElementById('uploadCard');
+            const disabled = document.getElementById('uploadDisabled');
+            if (card) card.hidden = !uploadAllowed;
+            if (disabled) disabled.hidden = uploadAllowed;
+            if (!uploadAllowed) {
+                progressContainer.style.display = 'none';
+                dropZone.classList.remove('dragover');
+            }
         }
 
         function fileUrl(serverUrl, filename) {
@@ -1379,7 +1433,11 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error(await readError(response, '上传失败'));
+                if (!response.ok) {
+                    const message = await readError(response, '上传失败');
+                    if (response.status === 403) applyUploadPermission(false);
+                    throw new Error(message);
+                }
 
                 progressFill.style.width = '100%';
                 progressText.textContent = `已上传：${file.name}`;
@@ -1393,7 +1451,12 @@
         }
 
         async function uploadFiles(files) {
+            if (!uploadAllowed) {
+                showNotification('上传功能已关闭', 'error');
+                return;
+            }
             for (let index = 0; index < files.length; index += 1) {
+                if (!uploadAllowed) break;
                 await uploadFile(files[index], index, files.length);
             }
 
@@ -1518,6 +1581,11 @@
             state.pageSize = Number(pageSizeSelect.value) || 10;
             state.page = 1;
             renderFiles();
+        });
+
+        // 禁止浏览器在非上传区域打开拖入的文件（上传关闭时尤为重要）
+        ['dragover', 'drop'].forEach((eventName) => {
+            document.addEventListener(eventName, (event) => event.preventDefault());
         });
 
         ['dragenter', 'dragover'].forEach((eventName) => {

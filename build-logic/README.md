@@ -6,7 +6,7 @@
 
 | 插件 ID | 内容 |
 | --- | --- |
-| `fileshare.android.application` | `com.android.application` + Kotlin Android；`compileSdk 36`、`minSdk 26`、`targetSdk 36`、Java / Kotlin 17、`buildConfig`、打包去重 |
+| `fileshare.android.application` | `com.android.application` + Kotlin Android；`compileSdk 36`、`buildToolsVersion 36.0.0`、`minSdk 26`、`targetSdk 36`、Java / Kotlin 17、`buildConfig`、打包去重；支持 `-Pfileshare.versionName/versionCode` 覆盖版本 |
 | `fileshare.android.library` | `com.android.library` + Kotlin Android；相同的 SDK / Java 配置与打包规则 |
 | `fileshare.android.compose` | 应用 Compose 编译器插件；未应用 Android 插件时自动应用 library 约定；添加 Compose BOM、UI、Foundation、Material 3、图标、Activity Compose 与调试工具 |
 | `fileshare.android.feature` | 组合 Compose 约定 + `core:designsystem`；添加 Lifecycle Compose、ViewModel、协程、Koin（Android / Compose / ViewModel） |
@@ -16,8 +16,8 @@
 ## 版本与镜像
 
 - 依赖版本集中在 [`gradle/libs.versions.toml`](../gradle/libs.versions.toml)，约定插件通过 `VersionCatalogsExtension` 读取，模块构建脚本使用生成的 `libs` 访问器。
-- Maven 仓库在根 [`settings.gradle.kts`](../settings.gradle.kts) 中优先使用阿里云 `google` / `public` / `gradle-plugin` 镜像，官方仓库兜底。
-- Gradle 发行包由 [`gradle/wrapper/gradle-wrapper.properties`](../gradle/wrapper/gradle-wrapper.properties) 指向腾讯云镜像的 Gradle 8.14.3。
+- Maven 仓库在根 [`settings.gradle.kts`](../settings.gradle.kts) 中优先使用阿里云 `google` / `public` / `gradle-plugin` 镜像，官方仓库兜底；设置 `CI=true` 时（GitHub Actions）自动跳过镜像，直接使用 Google / Maven Central。
+- Gradle 发行包由 [`gradle/wrapper/gradle-wrapper.properties`](../gradle/wrapper/gradle-wrapper.properties) 指向腾讯云镜像的 Gradle 8.14.3；CI 工作流会将其切换为官方地址。
 
 ## 新增模块
 

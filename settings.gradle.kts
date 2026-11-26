@@ -1,10 +1,12 @@
 pluginManagement {
     includeBuild("build-logic")
     repositories {
-        // 国内镜像优先，官方仓库兜底
-        maven("https://maven.aliyun.com/repository/gradle-plugin")
-        maven("https://maven.aliyun.com/repository/google")
-        maven("https://maven.aliyun.com/repository/public")
+        // 本地开发优先走国内镜像；CI（GitHub Actions）使用官方仓库，避免跨境拉取
+        if (System.getenv("CI") != "true") {
+            maven("https://maven.aliyun.com/repository/gradle-plugin")
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://maven.aliyun.com/repository/public")
+        }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -20,8 +22,10 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven("https://maven.aliyun.com/repository/google")
-        maven("https://maven.aliyun.com/repository/public")
+        if (System.getenv("CI") != "true") {
+            maven("https://maven.aliyun.com/repository/google")
+            maven("https://maven.aliyun.com/repository/public")
+        }
         google()
         mavenCentral()
     }

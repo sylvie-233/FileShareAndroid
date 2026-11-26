@@ -11,14 +11,19 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         pluginManager.apply("com.android.application")
         pluginManager.apply("org.jetbrains.kotlin.android")
 
+        // CI / 本地发布可用 -Pfileshare.versionName / -Pfileshare.versionCode 覆盖版本号
+        val versionNameOverride = (findProperty("fileshare.versionName") as String?)?.takeIf { it.isNotBlank() }
+        val versionCodeOverride = (findProperty("fileshare.versionCode") as String?)?.toIntOrNull()
+
         extensions.configure<ApplicationExtension> {
             compileSdk = 36
+            buildToolsVersion = "36.0.0"
 
             defaultConfig {
                 minSdk = 26
                 targetSdk = 36
-                versionCode = 1
-                versionName = "1.0.0"
+                versionCode = versionCodeOverride ?: 1
+                versionName = versionNameOverride ?: "1.0.0"
             }
 
             compileOptions {

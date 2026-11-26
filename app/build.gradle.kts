@@ -10,9 +10,25 @@ android {
         applicationId = "com.fileshare.lan"
     }
 
+    // CI 中通过 Secrets 注入签名材料；本地未配置时 release 包不签名（CI 会回退到 debug 包）
+    val releaseKeystorePath = System.getenv("FILESHARE_KEYSTORE_PATH")
+    val releaseSigning = if (!releaseKeystorePath.isNullOrBlank()) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseKeystorePath)
+            storePassword = System.getenv("FILESHARE_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("FILESHARE_KEY_ALIAS")
+            keyPassword = System.getenv("FILESHARE_KEY_PASSWORD")
+        }
+    } else {
+        null
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseSigning != null) {
+                signingConfig = releaseSigning
+            }
         }
     }
 }

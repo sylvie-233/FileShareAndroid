@@ -32,3 +32,4 @@ rootProject.name = "FileShare"
 include(":core:model")
 include(":core:common")
 include(":core:designsystem")
+include(":core:data")

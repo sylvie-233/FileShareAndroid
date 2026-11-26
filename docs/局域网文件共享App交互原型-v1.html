@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>局域网文件共享App · 交互原型 v1</title>
+<style>
+    :root {
+        --bg: #eef1f5;
+        --surface: #ffffff;
+        --surface-muted: #f4f6f9;
+        --border: #e3e8ee;
+        --border-strong: #cfd7e0;
+        --ink: #171e28;
+        --muted: #6b7686;
+        --faint: #98a2b3;
+        --accent: #3b6ef6;
+        --accent-soft: #ecf1fe;
+        --accent-hover: #2d5ce0;
+        --green: #1fa971;
+        --green-soft: #e6f6ef;
+        --danger: #d9483b;
+        --danger-soft: #fdeeea;
+        --amber: #d9922b;
+        --amber-soft: #fdf3e3;
+        --radius: 14px;
+        --shadow-lg: 0 24px 60px rgba(23, 30, 40, 0.16);
+        --shadow-sm: 0 1px 2px rgba(23, 30, 40, 0.06);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+            'Hiragino Sans GB', 'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 28px 16px;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============ 页面布局（桌面：说明区 + 手机框） ============ */
+    .stage {
+        display: flex;
+        align-items: center;
+        gap: 48px;
+        max-width: 1080px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .side-panel { max-width: 300px; }
+    .side-panel .eyebrow {
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+    .side-panel h1 {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+    }
+    .side-panel .version {
+        display: inline-block;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 2px 10px;
+        border-radius: 999px;
+        margin-bottom: 12px;
+    }
+    .side-panel p { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
+    .side-panel ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .side-panel li {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        color: var(--muted);
+        font-size: 13px;
+    }
+    .side-panel li svg {
+        width: 15px; height: 15px;
+        color: var(--green);
+        flex: none;
+        margin-top: 3px;
+    }
+    .side-panel .tip {
+        margin-top: 18px;
+        padding: 10px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 12px;
+        color: var(--faint);
+    }
+
+    /* ============ 手机框 ============ */
+    .phone {
+        width: 400px;
+        max-width: 100%;
+        height: 780px;
+        max-height: calc(100vh - 56px);
+        min-height: 560px;
+        background: var(--surface);
+        border: 1px solid var(--border-strong);
+        border-radius: 30px;
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .app-bar {
+        padding: 18px 20px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex: none;
+    }
+    .app-bar .brand { display: flex; align-items: center; gap: 10px; }
+    .app-logo {
+        width: 34px; height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #3b6ef6, #6a4ff0);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        flex: none;
+    }
+    .app-logo svg { width: 18px; height: 18px; }
+    .app-bar .title { font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+    .app-bar .sub { color: var(--faint); font-size: 11.5px; }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-chip .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+    .chip-off { background: var(--surface-muted); color: var(--muted); }
+    .chip-off .dot { background: var(--faint); }
+    .chip-on { background: var(--green-soft); color: var(--green); }
+    .chip-on .dot { background: var(--green); animation: pulse 1.6s ease infinite; }
+
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(31, 169, 113, 0.35); }
+        50% { box-shadow: 0 0 0 5px rgba(31, 169, 113, 0); }
+    }
+
+    /* ============ 屏幕区 ============ */
+    .screens { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+    .screen { padding: 16px 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .screen[hidden] { display: none; }
+
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .section-label {
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin: 2px 2px -6px;
+    }
+
+    /* ---- 服务控制 ---- */
+    .power-card { padding: 22px 20px; text-align: center; }
+    .power-btn {
+        width: 92px; height: 92px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+    .power-btn svg { width: 34px; height: 34px; }
+    .power-btn:active { transform: scale(0.94); }
+    .power-off {
+        background: var(--surface-muted);
+        border: 1.5px solid var(--border-strong);
+        color: var(--muted);
+    }
+    .power-off:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .power-on {
+        background: linear-gradient(135deg, #23b47c, #1a9264);
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(31, 169, 113, 0.35);
+    }
+    .power-on::after {
+        content: '';
+        position: absolute;
+        inset: -9px;
+        border-radius: 50%;
+        border: 2px solid rgba(31, 169, 113, 0.35);
+        animation: ring 2s ease infinite;
+    }
+    @keyframes ring {
+        0% { transform: scale(0.92); opacity: 1; }
+        100% { transform: scale(1.12); opacity: 0; }
+    }
+    .power-btn.loading { pointer-events: none; }
+    .power-btn.loading svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .power-state { margin-top: 12px; font-size: 16px; font-weight: 700; }
+    .power-hint { margin-top: 3px; color: var(--muted); font-size: 12.5px; }
+
+    .live-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+    }
+    .stat .num { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat .lbl { color: var(--faint); font-size: 11px; margin-top: 1px; }
+
+    /* ---- 访问地址 ---- */
+    .addr-card { padding: 16px 16px 14px; }
+    .addr-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .addr-title { font-size: 13px; font-weight: 650; display: flex; align-items: center; gap: 7px; }
+    .addr-title svg { width: 15px; height: 15px; color: var(--accent); }
+    .addr-row { display: flex; gap: 8px; }
+    .addr-input {
+        flex: 1; min-width: 0;
+        height: 40px;
+        padding: 0 12px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--ink);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12.5px;
+    }
+    .addr-input:focus { outline: none; border-color: var(--accent); }
+
+    .qr-toggle {
+        height: 40px;
+        padding: 0 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 12.5px;
+        font-weight: 550;
+        color: var(--ink);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .qr-toggle svg { width: 14px; height: 14px; }
+    .qr-toggle:hover { background: var(--surface-muted); }
+
+    .addr-qr { margin-top: 12px; text-align: center; }
+    .addr-qr canvas {
+        width: 148px; height: 148px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px;
+        background: #fff;
+    }
+    .addr-qr .cap { color: var(--faint); font-size: 11.5px; margin-top: 6px; }
+
+    /* ---- 设备列表 ---- */
+    .device-card { padding: 14px 16px; }
+    .device-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .device-title { font-size: 13px; font-weight: 650; }
+    .device-count { color: var(--faint); font-size: 11.5px; }
+    .device-row {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .device-row:last-child { border-bottom: none; padding-bottom: 2px; }
+    .device-row:first-of-type { padding-top: 2px; }
+    .device-icon {
+        width: 32px; height: 32px;
+        border-radius: 9px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        display: flex; align-items: center; justify-content: center;
+        flex: none;
+    }
+    .device-icon svg { width: 16px; height: 16px; }
+    .device-info { flex: 1; min-width: 0; }
+    .device-name { font-size: 13.5px; font-weight: 550; }
+    .device-meta { color: var(--faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+    .device-tag {
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        flex: none;
+    }
+    .tag-self { background: var(--surface-muted); color: var(--muted); }
+    .tag-live { background: var(--green-soft); color: var(--green); }
+
+    /* ---- 文件页 ---- */
+    .files-toolbar { display: flex; gap: 8px; }
+    .search-box {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 40px;
+        padding: 0 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm);
+    }
+    .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 110, 246, 0.12); }
+    .search-box svg { width: 15px; height: 15px; color: var(--faint); flex: none; }
+    .search-box input {
+        flex: 1; min-width: 0;
+        border: none; background: transparent;
+        font-family: inherit; font-size: 13.5px; color: var(--ink);
+        outline: none;
+    }
+    .search-box input::placeholder { color: var(--faint); }
+
+    .files-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: -2px 2px;
+    }
+    .files-meta .count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .link-danger {
+        border: none; background: none;
+        color: var(--danger);
+        font-family: inherit; font-size: 12px; font-weight: 550;
+        cursor: pointer;
+        padding: 0;
+    }
+    .link-danger:disabled { color: var(--faint); cursor: not-allowed; }
+
+    .file-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .file-row:last-child { border-bottom: none; }
+    .file-badge {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+        flex: none;
+    }
+    .b-doc { background: #fdf3e3; color: #a3702a; }
+    .b-image { background: #e9f2fd; color: #3869b8; }
+    .b-media { background: #f1ecfa; color: #6f4cc0; }
+    .b-archive { background: #eee9e2; color: #7a6449; }
+    .b-code { background: #e6f5ee; color: #2c8a63; }
+    .b-apk { background: #e8f7f3; color: #128a70; }
+    .b-file { background: var(--surface-muted); color: var(--muted); }
+
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+        font-size: 13.5px; font-weight: 550;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .file-sub { color: var(--faint); font-size: 11.5px; margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .file-acts { display: flex; gap: 4px; flex: none; }
+    .icon-btn {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        border: none; background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .icon-btn svg { width: 16px; height: 16px; }
+    .icon-btn:hover { background: var(--surface-muted); color: var(--ink); }
+    .icon-btn.danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+    .empty-state { padding: 40px 20px; text-align: center; }
+    .empty-state .icon { color: var(--border-strong); margin-bottom: 8px; }
+    .empty-state .icon svg { width: 38px; height: 38px; }
+    .empty-title { font-size: 14px; font-weight: 600; }
+    .empty-hint { color: var(--faint); font-size: 12px; margin-top: 3px; }
+
+    /* 上传进度 */
+    .upload-panel { padding: 14px 16px; }
+    .upload-title { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 8px; }
+    .upload-title .name { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .upload-title .pct { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
+    .bar { height: 5px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 0.15s linear; }
+
+    .banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-radius: 12px;
+        font-size: 12.5px;
+    }
+    .banner svg { width: 16px; height: 16px; flex: none; }
+    .banner.warn { background: var(--amber-soft); color: #96651d; }
+
+    /* 分页 */
+    .pager-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 0 2px;
+    }
+    .page-btn {
+        min-width: 30px; height: 30px;
+        padding: 0 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: inherit; font-size: 12.5px;
+        cursor: pointer;
+    }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-btn.is-current { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+    /* ---- 设置页 ---- */
+    .set-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px 16px;
+        border-bottom: 1px solid var(--border);
+    }
+    .set-row:last-child { border-bottom: none; }
+    .set-label { font-size: 13.5px; font-weight: 550; }
+    .set-desc { color: var(--faint); font-size: 11.5px; margin-top: 1px; }
+    .set-value { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+    .set-row.clickable { cursor: pointer; }
+    .set-row.clickable:hover { background: var(--surface-muted); }
+    .set-row.clickable .set-value { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
+    .set-row.clickable .chev { width: 14px; height: 14px; color: var(--faint); }
+
+    /* 文件夹选择弹窗 */
+    .crumbs {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 8px 10px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 10px;
+    }
+    .crumb { border: none; background: none; font-family: inherit; font-size: 12px; color: var(--muted); cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+    .crumb:hover { background: var(--border); color: var(--ink); }
+    .crumb-sep { color: var(--faint); }
+    .crumb.is-current { color: var(--ink); font-weight: 600; }
+
+    .folder-list {
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+    }
+    .folder-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--ink);
+        cursor: pointer;
+        text-align: left;
+    }
+    .folder-row:last-child { border-bottom: none; }
+    .folder-row:hover { background: var(--accent-soft); }
+    .folder-row svg { width: 17px; height: 17px; color: var(--amber); flex: none; }
+    .folder-empty { padding: 22px 12px; text-align: center; color: var(--faint); font-size: 12px; background: var(--surface); }
+
+    .seg {
+        display: inline-flex;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 2px;
+        gap: 2px;
+    }
+    .seg button {
+        border: none; background: transparent;
+        height: 26px; padding: 0 10px;
+        border-radius: 7px;
+        font-family: inherit; font-size: 12px; font-weight: 550;
+        color: var(--muted);
+        cursor: pointer;
+    }
+    .seg button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+    .switch { position: relative; width: 42px; height: 24px; flex: none; cursor: pointer; }
+    .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .switch .track {
+        position: absolute; inset: 0;
+        background: #d4dae2;
+        border-radius: 999px;
+        transition: background 0.18s ease;
+    }
+    .switch .track::after {
+        content: '';
+        position: absolute;
+        top: 3px; left: 3px;
+        width: 18px; height: 18px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        transition: transform 0.18s ease;
+    }
+    .switch input:checked + .track { background: var(--green); }
+    .switch input:checked + .track::after { transform: translateX(18px); }
+
+    .about { text-align: center; color: var(--faint); font-size: 11.5px; padding: 4px 0 2px; }
+
+    /* ---- 底部导航 ---- */
+    .tab-bar {
+        flex: none;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+        padding: 6px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+    .tab {
+        border: none; background: none;
+        display: flex; flex-direction: column;
+        align-items: center; gap: 3px;
+        padding: 6px 0;
+        font-family: inherit;
+        font-size: 11px; font-weight: 600;
+        color: var(--faint);
+        cursor: pointer;
+        border-radius: 10px;
+    }
+    .tab svg { width: 20px; height: 20px; }
+    .tab.active { color: var(--accent); }
+    .tab:not(.active):hover { color: var(--muted); }
+
+    /* ---- 弹层 ---- */
+    .modal-mask {
+        position: absolute; inset: 0;
+        background: rgba(15, 20, 28, 0.45);
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px;
+        z-index: 60;
+        animation: fade 0.15s ease;
+    }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+        background: var(--surface);
+        border-radius: 18px;
+        padding: 20px;
+        width: 100%;
+        max-width: 320px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+        animation: pop 0.18s ease;
+    }
+    @keyframes pop { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .modal-text { color: var(--muted); font-size: 13px; margin-bottom: 18px; word-break: break-all; }
+    .modal-qr { text-align: center; }
+    .modal-qr canvas {
+        width: 200px; height: 200px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        background: #fff;
+        margin-bottom: 8px;
+    }
+    .modal-qr .m-url {
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px; color: var(--muted);
+        word-break: break-all;
+        margin-bottom: 16px;
+    }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn {
+        height: 36px;
+        padding: 0 16px;
+        border-radius: 9px;
+        border: 1px solid transparent;
+        font-family: inherit; font-size: 13px; font-weight: 600;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 6px;
+        white-space: nowrap;
+    }
+    .btn-ghost { background: var(--surface-muted); color: var(--ink); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { filter: brightness(0.94); }
+
+    /* ---- Toast ---- */
+    .toast {
+        position: absolute;
+        left: 50%;
+        bottom: 84px;
+        transform: translate(-50%, 12px);
+        background: #1d2430;
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 550;
+        padding: 10px 18px;
+        border-radius: 999px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 80;
+        max-width: calc(100% - 40px);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ---- 移动端适配：去掉手机框 ---- */
+    .side-panel { display: none; }
+    @media (min-width: 900px) {
+        .side-panel { display: block; }
+    }
+    @media (max-width: 560px) {
+        body { padding: 0; }
+        .phone {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            max-height: none;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+    <!-- 桌面端说明面板 -->
+    <aside class="side-panel">
+        <div class="eyebrow">Interactive Prototype</div>
+        <h1>FileShare · 局域网文件共享</h1>
+        <span class="version">原型 v1.0 · Android App</span>
+        <p>点击启动 / 关闭服务后，局域网内设备通过浏览器访问该地址即可上传、下载文件。数据只保存在本机。</p>
+        <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>一键启动 / 关闭 HTTP 共享服务</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>局域网地址 + 二维码，手机扫码直连</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>浏览器端拖拽上传（本页为 App 端视角）</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>文件搜索、分页、下载、分享、删除</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>连接设备实时可见，端口 / 限额可配置</li>
+        </ul>
+        <div class="tip">💡 原型内所有数据均为模拟数据，交互仅用于演示流程。</div>
+    </aside>
+
+    <!-- 手机框 -->
+    <div class="phone">
+        <header class="app-bar">
+            <div class="brand">
+                <div class="app-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66L11 7"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66L13 17"/></svg>
+                </div>
+                <div>
+                    <div class="title">FileShare</div>
+                    <div class="sub">局域网文件共享</div>
+                </div>
+            </div>
+            <span class="status-chip chip-off" id="statusChip"><span class="dot"></span><span id="statusText">未运行</span></span>
+        </header>
+
+        <main class="screens">
+
+            <!-- ================= 服务页 ================= -->
+            <section class="screen" id="screen-home">
+                <div class="card power-card">
+                    <button class="power-btn power-off" id="powerBtn" aria-label="启动或关闭服务">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+                    </button>
+                    <div class="power-state" id="powerState">服务未运行</div>
+                    <div class="power-hint" id="powerHint">点击启动，共享本机文件给局域网设备</div>
+                    <div class="live-stats" id="liveStats" hidden>
+                        <div class="stat"><div class="num" id="statUptime">00:00</div><div class="lbl">运行时长</div></div>
+                        <div class="stat"><div class="num" id="statSpeed">—</div><div class="lbl">实时速率</div></div>
+                        <div class="stat"><div class="num" id="statTrans">0</div><div class="lbl">累计传输</div></div>
+                    </div>
+                </div>
+
+                <div class="card addr-card" id="addrCard" hidden>
+                    <div class="addr-head">
+                        <span class="addr-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>
+                            局域网访问地址
+                        </span>
+                    </div>
+                    <div class="addr-row">
+                        <input class="addr-input" id="addrInput" readonly aria-label="局域网访问地址">
+                        <button class="qr-toggle" id="qrBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3h-3zM19 19h1v1h-1z"/></svg>
+                            二维码
+                        </button>
+                        <button class="qr-toggle" id="copyBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                            复制
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card device-card" id="deviceCard" hidden>
+                    <div class="device-head">
+                        <span class="device-title">已连接设备</span>
+                        <span class="device-count" id="deviceCount">0 台在线</span>
+                    </div>
+                    <div id="deviceList"></div>
+                </div>
+
+                <div class="banner warn" id="offlineTip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+                    服务未运行时，其他设备无法访问共享文件。
+                </div>
+            </section>
+
+            <!-- ================= 文件页 ================= -->
+            <section class="screen" id="screen-files" hidden>
+                <div class="files-toolbar">
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input type="search" id="searchInput" placeholder="搜索文件名…" autocomplete="off">
+                    </div>
+                    <button class="qr-toggle" id="uploadBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                        上传
+                    </button>
+                </div>
+
+                <div class="upload-panel card" id="uploadPanel" hidden>
+                    <div class="upload-title"><span class="name" id="uploadName">正在上传…</span><span class="pct" id="uploadPct">0%</span></div>
+                    <div class="bar"><div class="bar-fill" id="uploadFill"></div></div>
+                </div>
+
+                <div class="files-meta">
+                    <span class="count" id="filesCount">共 0 个文件</span>
+                    <button class="link-danger" id="clearBtn" disabled>清空全部</button>
+                </div>
+
+                <div class="card" id="fileListCard"></div>
+
+                <div class="pager-bar" id="pagerBar" hidden></div>
+            </section>
+
+            <!-- ================= 设置页 ================= -->
+            <section class="screen" id="screen-settings" hidden>
+                <span class="section-label">服务</span>
+                <div class="card">
+                    <div class="set-row">
+                        <div><div class="set-label">服务端口</div><div class="set-desc">重启服务后生效</div></div>
+                        <div class="seg" id="portSeg">
+                            <button data-v="8080">8080</button>
+                            <button data-v="8000">8000</button>
+                            <button data-v="9090">9090</button>
+                        </div>
+                    </div>
+                    <div class="set-row">
+                        <div><div class="set-label">开机自动启动服务</div><div class="set-desc">设备开机后自动开启共享</div></div>
+                        <label class="switch"><input type="checkbox" id="setAutostart" checked><span class="track"></span></label>
+                    </div>
+                    <div class="set-row">
+                        <div><div class="set-label">共享时保持屏幕常亮</div><div class="set-desc">避免传输中息屏断开</div></div>
+                        <label class="switch"><input type="checkbox" id="setKeepAwake" checked><span class="track"></span></label>
+                    </div>
+                </div>
+
+                <span class="section-label">传输</span>
+                <div class="card">
+                    <div class="set-row">
+                        <div><div class="set-label">单文件大小上限</div><div class="set-desc">超出将拒绝上传</div></div>
+                        <div class="seg" id="limitSeg">
+                            <button data-v="100">100 MB</button>
+                            <button data-v="1024">1 GB</button>
+                            <button data-v="0">不限</button>
+                        </div>
+                    </div>
+                    <div class="set-row">
+                        <div><div class="set-label">允许其他设备上传</div><div class="set-desc">关闭后仅允许下载</div></div>
+                        <label class="switch"><input type="checkbox" id="setAllowUpload" checked><span class="track"></span></label>
+                    </div>
+                    <div class="set-row clickable" id="saveDirRow" title="点击修改保存目录">
+                        <div><div class="set-label">保存目录</div><div class="set-desc">点击修改，需系统文件夹授权</div></div>
+                        <span class="set-value"><span id="saveDirValue">Download/FileShare</span>
+                            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        </span>
+                    </div>
+                </div>
+                <div class="about">数据仅存于本机，不经任何第三方服务器 · MIT License</div>
+            </section>
+
+        </main>
+
+        <!-- 底部导航 -->
+        <nav class="tab-bar">
+            <button class="tab active" data-screen="home">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+                服务
+            </button>
+            <button class="tab" data-screen="files">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>
+                文件
+            </button>
+            <button class="tab" data-screen="settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+                设置
+            </button>
+        </nav>
+
+        <!-- 二维码弹窗 -->
+        <div class="modal-mask" id="qrModal" hidden>
+            <div class="modal">
+                <div class="modal-qr">
+                    <canvas id="qrCanvas"></canvas>
+                    <div class="m-url" id="qrUrl"></div>
+                </div>
+                <div class="modal-btns">
+                    <button class="btn btn-ghost" id="qrCopyBtn">复制链接</button>
+                    <button class="btn btn-primary" id="qrCloseBtn">完成</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文件夹选择弹窗 -->
+        <div class="modal-mask" id="dirModal" hidden>
+            <div class="modal">
+                <div class="modal-title">选择保存目录</div>
+                <div class="crumbs" id="dirCrumbs"></div>
+                <div class="folder-list" id="folderList"></div>
+                <div class="modal-btns" style="margin-top: 16px;">
+                    <button class="btn btn-ghost" id="dirCancelBtn">取消</button>
+                    <button class="btn btn-primary" id="dirOkBtn">选择此文件夹</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 确认弹窗 -->
+        <div class="modal-mask" id="confirmModal" hidden>
+            <div class="modal">
+                <div class="modal-title" id="confirmTitle">确认操作</div>
+                <div class="modal-text" id="confirmText"></div>
+                <div class="modal-btns">
+                    <button class="btn btn-ghost" id="confirmCancel">取消</button>
+                    <button class="btn btn-danger" id="confirmOk">确认</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+    </div>
+</div>
+
+<script>
+/* =====================================================
+   FileShare Android · 交互原型 v1
+   所有数据为前端模拟，用于演示交互流程。
+   ===================================================== */
+
+// ---------- 工具 ----------
+const $ = (id) => document.getElementById(id);
+
+function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+async function copyText(text, okMsg) {
+    try {
+        if (navigator.clipboard) await navigator.clipboard.writeText(text);
+        else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        }
+        toast(okMsg || '已复制到剪贴板');
+    } catch (e) {
+        toast('复制失败，请手动复制');
+    }
+}
+
+// 确认弹窗
+let confirmCb = null;
+function askConfirm(title, text, okLabel, cb) {
+    $('confirmTitle').textContent = title;
+    $('confirmText').textContent = text;
+    $('confirmOk').textContent = okLabel || '确认';
+    confirmCb = cb;
+    $('confirmModal').hidden = false;
+}
+$('confirmCancel').addEventListener('click', () => { $('confirmModal').hidden = true; confirmCb = null; });
+$('confirmOk').addEventListener('click', () => {
+    $('confirmModal').hidden = true;
+    if (confirmCb) { const cb = confirmCb; confirmCb = null; cb(); }
+});
+
+// ---------- 模拟二维码（确定性伪随机图案） ----------
+function drawFakeQr(canvas, text) {
+    const N = 25, size = canvas.width = canvas.height = N * 4;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
+
+    // 简单字符串哈希 → 种子
+    let seed = 0;
+    for (let i = 0; i < text.length; i++) seed = (seed * 31 + text.charCodeAt(i)) >>> 0;
+    const rand = () => { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967295; };
+
+    ctx.fillStyle = '#171e28';
+    for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+            const inFinder =
+                (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+            if (inFinder) continue;
+            if (rand() < 0.46) ctx.fillRect(x * 4, y * 4, 4, 4);
+        }
+    }
+    // 三个定位角
+    const finder = (fx, fy) => {
+        ctx.fillStyle = '#171e28';
+        ctx.fillRect(fx * 4, fy * 4, 7 * 4, 7 * 4);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect((fx + 1) * 4, (fy + 1) * 4, 5 * 4, 5 * 4);
+        ctx.fillStyle = '#171e28';
+        ctx.fillRect((fx + 2) * 4, (fy + 2) * 4, 3 * 4, 3 * 4);
+    };
+    finder(1, 1); finder(N - 8, 1); finder(1, N - 8);
+}
+
+// ---------- 应用状态 ----------
+const app = {
+    running: false,
+    starting: false,
+    startedAt: 0,
+    port: 8080,
+    ip: '192.168.1.100',
+    files: [
+        { name: '产品需求文档-v3.pdf', size: 2_417_152, modified: nowMinus(22), from: 'MI 13' },
+        { name: '团队合影-20261126.jpg', size: 4_823_904, modified: nowMinus(95), from: 'iPhone 15' },
+        { name: '演示录屏.mp4', size: 87_346_688, modified: nowMinus(360), from: 'MI 13' },
+        { name: '周报汇总.xlsx', size: 362_496, modified: nowMinus(1500), from: '本机' },
+        { name: 'app-release.apk', size: 24_851_456, modified: nowMinus(2600), from: '本机' },
+        { name: '数据备份-1125.zip', size: 512_881_664, modified: nowMinus(4700), from: 'iPad' },
+        { name: 'logo-设计稿.png', size: 1_835_008, modified: nowMinus(6900), from: 'iPhone 15' },
+        { name: 'readme.md', size: 4_608, modified: nowMinus(9100), from: '本机' },
+        { name: '会议记录-1124.md', size: 9_216, modified: nowMinus(12000), from: 'MI 13' },
+        { name: '背景音乐.flac', size: 38_731_776, modified: nowMinus(15200), from: 'iPad' },
+        { name: '接口文档.html', size: 128_512, modified: nowMinus(18600), from: '本机' },
+        { name: '扫描件.pdf', size: 6_291_456, modified: nowMinus(24000), from: 'iPhone 15' }
+    ],
+    devices: [
+        { name: '本机（服务端）', ip: '192.168.1.100', self: true },
+        { name: 'MI 13', ip: '192.168.1.102', live: true },
+        { name: 'iPhone 15', ip: '192.168.1.103', live: true }
+    ],
+    query: '',
+    page: 1,
+    pageSize: 8,
+    transBytes: 0
+};
+
+function nowMinus(sec) { return Math.floor(Date.now() / 1000) - sec; }
+
+function serverUrl() { return `http://${app.ip}:${app.port}`; }
+function fileUrl(name) { return `${serverUrl()}/api/v1/download/${encodeURIComponent(name)}`; }
+
+// ---------- 屏幕切换 ----------
+document.querySelectorAll('.tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t === tab));
+        ['home', 'files', 'settings'].forEach((s) => {
+            $('screen-' + s).hidden = s !== tab.dataset.screen;
+        });
+        $('screen-' + tab.dataset.screen).scrollTop = 0;
+    });
+});
+
+// ---------- 服务启动 / 关闭 ----------
+const powerBtn = $('powerBtn');
+
+powerBtn.addEventListener('click', () => {
+    if (app.starting) return;
+    if (!app.running) startService();
+    else {
+        askConfirm('关闭服务？', '关闭后所有已连接设备将无法访问共享文件。', '关闭服务', stopService);
+    }
+});
+
+function startService() {
+    app.starting = true;
+    powerBtn.classList.add('loading');
+    $('powerState').textContent = '正在启动…';
+    $('powerHint').textContent = '正在绑定端口并监听局域网';
+
+    setTimeout(() => {
+        app.running = true;
+        app.starting = false;
+        app.startedAt = Date.now();
+        powerBtn.classList.remove('loading');
+        powerBtn.classList.remove('power-off');
+        powerBtn.classList.add('power-on');
+        $('powerState').textContent = '服务运行中';
+        $('powerHint').textContent = '其他设备可通过下方地址访问';
+        $('statusChip').className = 'status-chip chip-on';
+        $('statusText').textContent = '运行中';
+        $('addrCard').hidden = false;
+        $('deviceCard').hidden = false;
+        $('offlineTip').hidden = true;
+        $('liveStats').hidden = false;
+        $('addrInput').value = serverUrl();
+        renderDevices();
+        startTicker();
+        toast(`服务已启动 · ${serverUrl()}`);
+        simulateIncoming();
+    }, 900);
+}
+
+function stopService() {
+    app.running = false;
+    powerBtn.classList.remove('power-on');
+    powerBtn.classList.add('power-off');
+    $('powerState').textContent = '服务未运行';
+    $('powerHint').textContent = '点击启动，共享本机文件给局域网设备';
+    $('statusChip').className = 'status-chip chip-off';
+    $('statusText').textContent = '未运行';
+    $('addrCard').hidden = true;
+    $('deviceCard').hidden = true;
+    $('offlineTip').hidden = false;
+    $('liveStats').hidden = true;
+    stopTicker();
+    toast('服务已关闭');
+}
+
+// ---------- 运行指标模拟 ----------
+let tickerTimer = null, incomingTimer = null;
+
+function startTicker() {
+    stopTicker();
+    const tick = () => {
+        const sec = Math.floor((Date.now() - app.startedAt) / 1000);
+        const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+        const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        $('statUptime').textContent = h === '00' ? `${m}:${s}` : `${h}:${m}:${s}`;
+
+        const speed = 0.4 + Math.random() * 5.2;
+        $('statSpeed').textContent = speed.toFixed(1) + ' MB/s';
+
+        app.transBytes += speed * 1024 * 1024;
+        $('statTrans').textContent = formatSize(app.transBytes);
+    };
+    tick();
+    tickerTimer = setInterval(tick, 1000);
+}
+function stopTicker() {
+    clearInterval(tickerTimer);
+    clearInterval(incomingTimer);
+    $('statSpeed').textContent = '—';
+}
+
+// 模拟：设备陆续上线 / 有新文件从其他设备传来
+function simulateIncoming() {
+    incomingTimer = setInterval(() => {
+        if (!app.running) return;
+        if (Math.random() < 0.5) {
+            const pool = ['截图_1126_103045.png', '新建文档.docx', 'data_export.csv', 'report_final.pdf', 'IMG_20261126.jpg'];
+            const name = pool[Math.floor(Math.random() * pool.length)];
+            const dev = app.devices.filter((d) => !d.self);
+            const from = dev[Math.floor(Math.random() * dev.length)].name;
+            app.files.unshift({
+                name, size: Math.floor(200_000 + Math.random() * 30_000_000),
+                modified: Math.floor(Date.now() / 1000), from
+            });
+            renderFiles();
+            toast(`${from} 上传了 ${name}`);
+        }
+    }, 14000);
+}
+
+// ---------- 设备列表 ----------
+function renderDevices() {
+    const live = app.devices.filter((d) => d.live).length;
+    $('deviceCount').textContent = `${live} 台在线`;
+    $('deviceList').replaceChildren(
+        ...app.devices.map((d) => {
+            const row = document.createElement('div');
+            row.className = 'device-row';
+            const icon = document.createElement('div');
+            icon.className = 'device-icon';
+            icon.innerHTML = d.self
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M10 18h4"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>';
+            const info = document.createElement('div');
+            info.className = 'device-info';
+            info.innerHTML = `<div class="device-name"></div><div class="device-meta"></div>`;
+            info.querySelector('.device-name').textContent = d.name;
+            info.querySelector('.device-meta').textContent = d.ip;
+            const tag = document.createElement('span');
+            if (d.self) { tag.className = 'device-tag tag-self'; tag.textContent = '本机'; }
+            else { tag.className = 'device-tag tag-live'; tag.textContent = '在线'; }
+            row.append(icon, info, tag);
+            return row;
+        })
+    );
+}
+
+// ---------- 文件列表 ----------
+const EXT_TONES = {
+    doc: ['doc', 'docx', 'pdf', 'txt', 'md', 'rtf'],
+    image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'heic'],
+    media: ['mp3', 'wav', 'flac', 'aac', 'mp4', 'avi', 'mkv', 'mov'],
+    archive: ['zip', 'rar', '7z', 'tar', 'gz'],
+    code: ['js', 'ts', 'py', 'html', 'css', 'json', 'yml', 'sh'],
+    apk: ['apk']
+};
+
+function ext(name) {
+    const dot = name.lastIndexOf('.');
+    return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+}
+function badgeClass(name) {
+    const e = ext(name);
+    for (const [tone, list] of Object.entries(EXT_TONES)) if (list.includes(e)) return 'b-' + tone;
+    return 'b-file';
+}
+function badgeLabel(name) {
+    const e = ext(name);
+    return (e || 'file').slice(0, 4).toUpperCase();
+}
+function formatSize(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    const v = bytes / Math.pow(k, i);
+    return `${i === 0 ? v : v.toFixed(v >= 10 ? 1 : 2)} ${sizes[i]}`;
+}
+function formatTime(ts) {
+    const d = new Date(ts * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+    if (diff < 7 * 86400) return `${Math.floor(diff / 86400)} 天前`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function visibleFiles() {
+    const q = app.query.trim().toLowerCase();
+    return q ? app.files.filter((f) => f.name.toLowerCase().includes(q)) : app.files.slice();
+}
+
+const ICON_DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
+const ICON_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="m6 7 1 12h10l1-12"/></svg>';
+
+function renderFiles() {
+    const list = $('fileListCard');
+    const visible = visibleFiles();
+    const totalPages = Math.max(1, Math.ceil(visible.length / app.pageSize));
+    if (app.page > totalPages) app.page = totalPages;
+
+    $('clearBtn').disabled = app.files.length === 0;
+    $('filesCount').textContent = visible.length === app.files.length
+        ? `共 ${app.files.length} 个文件`
+        : `匹配 ${visible.length} 个 / 共 ${app.files.length} 个`;
+
+    list.replaceChildren();
+
+    if (app.files.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg></div><div class="empty-title">还没有共享文件</div><div class="empty-hint">点击右上角「上传」，或等局域网设备推送文件</div></div>';
+        $('pagerBar').hidden = true;
+        return;
+    }
+    if (visible.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="empty-title">没有匹配「${app.query.trim()}」的文件</div><div class="empty-hint">换个关键词试试</div></div>`;
+        $('pagerBar').hidden = true;
+        return;
+    }
+
+    const start = (app.page - 1) * app.pageSize;
+    visible.slice(start, start + app.pageSize).forEach((f) => list.appendChild(fileRow(f)));
+    renderPager(totalPages);
+}
+
+function fileRow(f) {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+
+    const badge = document.createElement('div');
+    badge.className = 'file-badge ' + badgeClass(f.name);
+    badge.textContent = badgeLabel(f.name);
+
+    const info = document.createElement('div');
+    info.className = 'file-info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'file-name';
+    nameEl.textContent = f.name;
+    nameEl.title = f.name;
+    const subEl = document.createElement('div');
+    subEl.className = 'file-sub';
+    subEl.textContent = `${formatSize(f.size)} · ${formatTime(f.modified)} · 来自 ${f.from}`;
+    info.append(nameEl, subEl);
+
+    const acts = document.createElement('div');
+    acts.className = 'file-acts';
+    acts.appendChild(iconBtn('下载', ICON_DL, '', () => toast(`已开始下载：${f.name}`)));
+    acts.appendChild(iconBtn('复制下载链接', ICON_SHARE, '', () => copyText(fileUrl(f.name), '下载链接已复制')));
+    acts.appendChild(iconBtn('删除', ICON_TRASH, 'danger', () => {
+        askConfirm('删除文件？', `将从本机永久删除「${f.name}」，此操作不可恢复。`, '删除', () => {
+            app.files = app.files.filter((x) => x !== f);
+            renderFiles();
+            toast('文件已删除');
+        });
+    }));
+
+    row.append(badge, info, acts);
+    return row;
+}
+
+function iconBtn(label, icon, extra, handler) {
+    const b = document.createElement('button');
+    b.className = 'icon-btn ' + extra;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = icon;
+    b.addEventListener('click', handler);
+    return b;
+}
+
+function renderPager(totalPages) {
+    const bar = $('pagerBar');
+    if (totalPages <= 1) { bar.hidden = true; return; }
+    bar.hidden = false;
+    bar.replaceChildren();
+    const mk = (label, disabled, cur, fn) => {
+        const b = document.createElement('button');
+        b.className = 'page-btn' + (cur ? ' is-current' : '');
+        b.textContent = label;
+        b.disabled = disabled;
+        b.addEventListener('click', fn);
+        return b;
+    };
+    bar.appendChild(mk('‹', app.page === 1, false, () => { app.page--; renderFiles(); }));
+    for (let p = 1; p <= totalPages; p++) {
+        bar.appendChild(mk(String(p), false, p === app.page, () => { app.page = p; renderFiles(); }));
+    }
+    bar.appendChild(mk('›', app.page === totalPages, false, () => { app.page++; renderFiles(); }));
+}
+
+// 搜索
+let searchTimer = null;
+$('searchInput').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        app.query = e.target.value;
+        app.page = 1;
+        renderFiles();
+    }, 150);
+});
+
+// 清空
+$('clearBtn').addEventListener('click', () => {
+    askConfirm('清空全部文件？', `将永久删除全部 ${app.files.length} 个共享文件，此操作不可恢复。`, '全部删除', () => {
+        app.files = [];
+        app.page = 1;
+        renderFiles();
+        toast('已清空全部文件');
+    });
+});
+
+// ---------- 模拟上传 ----------
+$('uploadBtn').addEventListener('click', () => {
+    if ($('uploadPanel').hidden === false) { toast('已有任务正在上传'); return; }
+    const pool = ['需求评审纪要.docx', '架构草图.png', 'demo_data.csv', '产品白皮书.pdf'];
+    const name = pool[Math.floor(Math.random() * pool.length)];
+    const panel = $('uploadPanel');
+    panel.hidden = false;
+    $('uploadName').textContent = '正在上传：' + name;
+    let pct = 0;
+    const timer = setInterval(() => {
+        pct = Math.min(100, pct + 4 + Math.random() * 9);
+        $('uploadPct').textContent = Math.floor(pct) + '%';
+        $('uploadFill').style.width = pct + '%';
+        if (pct >= 100) {
+            clearInterval(timer);
+            app.files.unshift({ name, size: Math.floor(1_000_000 + Math.random() * 20_000_000), modified: Math.floor(Date.now() / 1000), from: '本机' });
+            app.page = 1;
+            renderFiles();
+            toast(`已上传 ${name}`);
+            setTimeout(() => {
+                panel.hidden = true;
+                $('uploadFill').style.width = '0%';
+            }, 700);
+        }
+    }, 120);
+});
+
+// ---------- 地址 / 二维码 / 复制 ----------
+$('copyBtn').addEventListener('click', () => copyText(serverUrl(), '链接已复制到剪贴板'));
+
+$('qrBtn').addEventListener('click', () => {
+    const url = serverUrl();
+    $('qrUrl').textContent = url;
+    drawFakeQr($('qrCanvas'), url);
+    $('qrModal').hidden = false;
+});
+$('qrCloseBtn').addEventListener('click', () => { $('qrModal').hidden = true; });
+$('qrCopyBtn').addEventListener('click', () => copyText(serverUrl(), '链接已复制到剪贴板'));
+
+// ---------- 设置 ----------
+function bindSeg(id, cb) {
+    const seg = $(id);
+    seg.querySelectorAll('button').forEach((b) => {
+        b.addEventListener('click', () => {
+            seg.querySelectorAll('button').forEach((x) => x.classList.toggle('active', x === b));
+            cb(b.dataset.v);
+        });
+    });
+    seg.querySelector('button').classList.add('active');
+}
+bindSeg('portSeg', (v) => {
+    app.port = Number(v);
+    if (app.running) $('addrInput').value = serverUrl();
+    toast(`端口已设为 ${v}，重启服务后生效`);
+});
+bindSeg('limitSeg', (v) => toast(`单文件上限已设为 ${v === '0' ? '不限' : v + ' MB'}`));
+$('setAutostart').addEventListener('change', (e) => toast(e.target.checked ? '已开启开机自启' : '已关闭开机自启'));
+$('setKeepAwake').addEventListener('change', (e) => toast(e.target.checked ? '已开启屏幕常亮' : '已关闭屏幕常亮'));
+$('setAllowUpload').addEventListener('change', (e) => toast(e.target.checked ? '已允许其他设备上传' : '已禁止其他设备上传（仅下载）'));
+
+// ---------- 保存目录（模拟 SAF 文件夹选择器） ----------
+const DIR_ROOT = '内部存储';
+const dirTree = {
+    '': [DIR_ROOT],
+    [DIR_ROOT]: ['Download', 'Documents', 'DCIM', 'Pictures', 'Movies', 'Music'],
+    'Download': ['FileShare', 'WeiXin'],
+    'Documents': ['Notes'],
+    'DCIM': ['Camera'],
+    'Pictures': [],
+    'Movies': [],
+    'Music': [],
+    'FileShare': [],
+    'WeiXin': [],
+    'Notes': [],
+    'Camera': []
+};
+let dirPath = [];            // 当前所在层级，如 ['Download', 'FileShare']
+let pickedPath = null;       // 已确认的目录
+
+function dirDisplayName(pathArr) {
+    return pathArr.length ? pathArr.join('/') : 'Download/FileShare';
+}
+
+$('saveDirRow').addEventListener('click', () => {
+    // 从当前已保存目录进入，便于微调
+    dirPath = pickedPath ? pickedPath.slice() : ['Download', 'FileShare'];
+    renderDirModal();
+    $('dirModal').hidden = false;
+});
+$('dirCancelBtn').addEventListener('click', () => { $('dirModal').hidden = true; });
+$('dirOkBtn').addEventListener('click', () => {
+    pickedPath = dirPath.slice();
+    $('saveDirValue').textContent = dirDisplayName(pickedPath);
+    $('dirModal').hidden = true;
+    toast(`保存目录已修改为 ${DIR_ROOT}/${dirDisplayName(pickedPath)}`);
+});
+
+function renderDirModal() {
+    // 面包屑
+    const crumbs = $('dirCrumbs');
+    crumbs.replaceChildren();
+    const mkCrumb = (label, pathArr, isCurrent) => {
+        const b = document.createElement('button');
+        b.className = 'crumb' + (isCurrent ? ' is-current' : '');
+        b.textContent = label;
+        b.addEventListener('click', () => { dirPath = pathArr.slice(); renderDirModal(); });
+        return b;
+    };
+    crumbs.appendChild(mkCrumb(DIR_ROOT, [], dirPath.length === 0));
+    dirPath.forEach((seg, i) => {
+        const sep = document.createElement('span');
+        sep.className = 'crumb-sep';
+        sep.textContent = '›';
+        crumbs.appendChild(sep);
+        crumbs.appendChild(mkCrumb(seg, dirPath.slice(0, i + 1), i === dirPath.length - 1));
+    });
+
+    // 子文件夹列表
+    const key = dirPath.length ? dirPath.join('/') : '';
+    const children = dirTree[key] || [];
+    const list = $('folderList');
+    list.replaceChildren();
+    if (children.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'folder-empty';
+        empty.textContent = '空文件夹，可直接选择此处';
+        list.appendChild(empty);
+        return;
+    }
+    const ICON_FOLDER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h3.5L12 7.5h6a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>';
+    children.forEach((name) => {
+        const b = document.createElement('button');
+        b.className = 'folder-row';
+        b.innerHTML = ICON_FOLDER + `<span></span>`;
+        b.querySelector('span').textContent = name;
+        b.addEventListener('click', () => { dirPath.push(name); renderDirModal(); });
+        list.appendChild(b);
+    });
+}
+
+// ---------- 初始化 ----------
+renderFiles();
+$('addrInput').value = serverUrl();
+</script>
+</body>
+</html>

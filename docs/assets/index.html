@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网文件共享</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <script src="/static/qrcode.js"></script>
+    <style>
+        :root {
+            --bg: #f3f1ec;
+            --surface: #fffdf8;
+            --surface-muted: #f7f5ef;
+            --border: #e4e0d5;
+            --border-strong: #d2cdbf;
+            --ink: #24211b;
+            --muted: #726c60;
+            --accent: #2d5a4b;
+            --accent-hover: #24493d;
+            --accent-soft: #e8f0eb;
+            --danger: #963d32;
+            --danger-soft: #f7eae7;
+            --radius: 10px;
+            --shadow: 0 1px 2px rgba(33, 29, 22, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                'Hiragino Sans GB', 'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 32px 20px 48px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .page-head {
+            padding: 4px 4px 12px;
+        }
+
+        .eyebrow {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: clamp(26px, 3.4vw, 34px);
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            max-width: 640px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 22px 24px;
+        }
+
+        .card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 650;
+            letter-spacing: 0.01em;
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 36px;
+            padding: 0 14px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn:focus-visible,
+        .page-btn:focus-visible,
+        .search-box:focus-within {
+            outline: 2px solid rgba(45, 90, 75, 0.35);
+            outline-offset: 2px;
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            line-height: 0;
+        }
+
+        .btn-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-ghost {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--ink);
+        }
+
+        .btn-ghost:hover {
+            background: var(--surface-muted);
+        }
+
+        .btn-ghost-danger {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .btn-ghost-danger:hover:not(:disabled) {
+            background: var(--danger-soft);
+            border-color: #e6cfc9;
+            color: var(--danger);
+        }
+
+        .btn-sm {
+            height: 30px;
+            padding: 0 9px;
+            font-size: 12.5px;
+            gap: 5px;
+        }
+
+        .btn-sm .btn-icon svg {
+            width: 13px;
+            height: 13px;
+        }
+
+        .share-row {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .share-link {
+            flex: 1;
+            min-width: 0;
+            height: 38px;
+            padding: 0 12px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--ink);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+            font-size: 12.5px;
+        }
+
+        .share-link:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .drop-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 36px 20px;
+            border: 1px dashed var(--border-strong);
+            border-radius: 8px;
+            background: var(--surface-muted);
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: #e2eee7;
+        }
+
+        .drop-icon {
+            width: 26px;
+            height: 26px;
+            color: var(--muted);
+            margin-bottom: 10px;
+            transition: color 0.15s ease;
+        }
+
+        .drop-zone:hover .drop-icon {
+            color: var(--accent);
+        }
+
+        .drop-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .drop-hint {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 12.5px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 14px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.25s ease;
+        }
+
+        .progress-text {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .files-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .files-title {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .files-title h2 {
+            font-size: 16px;
+            font-weight: 650;
+            letter-spacing: -0.01em;
+        }
+
+        .count {
+            color: var(--muted);
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 16px 0 8px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 340px;
+            height: 36px;
+            padding: 0 10px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(45, 90, 75, 0.12);
+            outline: none;
+        }
+
+        .search-box svg {
+            width: 15px;
+            height: 15px;
+            color: var(--muted);
+            flex: none;
+        }
+
+        .search-box input {
+            flex: 1;
+            min-width: 0;
+            border: none;
+            background: transparent;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 13.5px;
+            outline: none;
+        }
+
+        .search-box input::placeholder {
+            color: #9a9487;
+        }
+
+        .page-size {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 12.5px;
+            white-space: nowrap;
+        }
+
+        .page-size select {
+            height: 32px;
+            padding: 0 6px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+
+        .file-table {
+            margin-top: 6px;
+        }
+
+        .file-head,
+        .file-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 90px 150px 200px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-head {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 11.5px;
+            letter-spacing: 0.04em;
+        }
+
+        .file-head .head-actions {
+            text-align: right;
+        }
+
+        .file-row {
+            padding: 11px 10px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.12s ease;
+        }
+
+        .file-row:last-child {
+            border-bottom: none;
+        }
+
+        .file-row:hover {
+            background: var(--surface-muted);
+        }
+
+        .file-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: none;
+            width: 38px;
+            height: 27px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-doc {
+            background: #f4e9d8;
+            border-color: #e8d8bf;
+            color: #7a5a2e;
+        }
+
+        .badge-image {
+            background: #e6edf2;
+            border-color: #d3e0e8;
+            color: #3d6178;
+        }
+
+        .badge-media {
+            background: #eee8f1;
+            border-color: #e0d3e6;
+            color: #684d74;
+        }
+
+        .badge-archive {
+            background: #eeebe3;
+            border-color: #e0dbcf;
+            color: #665d4d;
+        }
+
+        .badge-code {
+            background: #e6efe9;
+            border-color: #d3e2d8;
+            color: #38604c;
+        }
+
+        .file-name-text {
+            min-width: 0;
+        }
+
+        .file-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .file-sub {
+            display: none;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .file-size,
+        .file-date {
+            color: var(--muted);
+            font-size: 12.5px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .file-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-download {
+            background: #f2f7f4;
+            border-color: #cfe0d7;
+            color: var(--accent);
+        }
+
+        .btn-download:hover {
+            background: var(--accent-soft);
+        }
+
+        .btn-share {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--ink);
+        }
+
+        .btn-share:hover {
+            background: var(--surface-muted);
+        }
+
+        .btn-delete {
+            background: #fbf3f1;
+            border-color: #e8d3ce;
+            color: var(--danger);
+        }
+
+        .btn-delete:hover {
+            background: var(--danger-soft);
+        }
+
+        .qrcode-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .qrcode-popup {
+            position: absolute;
+            right: 0;
+            bottom: calc(100% + 8px);
+            display: none;
+            padding: 8px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 10px 28px rgba(30, 27, 20, 0.14);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .qrcode-container:hover .qrcode-popup,
+        .qrcode-container:focus-within .qrcode-popup {
+            display: block;
+        }
+
+        .qrcode-img {
+            display: block;
+            width: 120px;
+            height: 120px;
+        }
+
+        .empty-state {
+            padding: 46px 20px;
+            text-align: center;
+        }
+
+        .empty-title {
+            font-size: 14.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .empty-hint {
+            color: var(--muted);
+            font-size: 12.5px;
+            margin-bottom: 14px;
+        }
+
+        .empty-state .btn {
+            height: 32px;
+            font-size: 12.5px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 12.5px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pager {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page-numbers {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .page-btn {
+            min-width: 30px;
+            height: 30px;
+            padding: 0 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: background 0.12s ease, border-color 0.12s ease;
+        }
+
+        .page-btn:hover:not(:disabled):not(.is-current) {
+            background: var(--surface-muted);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .page-btn.is-current {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .page-gap {
+            padding: 0 2px;
+            color: var(--muted);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: calc(100vw - 40px);
+            padding: 11px 16px;
+            background: #26231d;
+            border-left: 3px solid transparent;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13.5px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.22s ease;
+        }
+
+        .notification.success {
+            border-left-color: #7fb79a;
+        }
+
+        .notification.error {
+            border-left-color: #d0877a;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(24px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 14px 32px;
+            }
+
+            .page-head {
+                padding: 0 2px 8px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .subtitle {
+                font-size: 13px;
+            }
+
+            .card {
+                padding: 18px 16px;
+                border-radius: 8px;
+            }
+
+            .share-row {
+                flex-direction: column;
+            }
+
+            .share-link {
+                flex: none;
+                height: 44px;
+                padding: 0 14px;
+                font-size: 16px;
+            }
+
+            .share-row .btn {
+                width: 100%;
+                height: 44px;
+            }
+
+            .drop-zone {
+                padding: 30px 16px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                flex: none;
+                max-width: none;
+                height: 44px;
+                padding: 0 12px;
+            }
+
+            .search-box svg {
+                width: 17px;
+                height: 17px;
+            }
+
+            .search-box input {
+                height: 100%;
+                font-size: 16px;
+            }
+
+            .page-size {
+                justify-content: flex-end;
+            }
+
+            .file-head {
+                display: none;
+            }
+
+            .file-row {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 8px;
+                padding: 12px 4px;
+            }
+
+            .file-size,
+            .file-date {
+                display: none;
+            }
+
+            .file-sub {
+                display: block;
+            }
+
+            .file-actions {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+            }
+
+            .file-actions .btn {
+                width: 100%;
+            }
+
+            .file-actions .qrcode-container {
+                display: flex;
+                min-width: 0;
+            }
+
+            .qrcode-popup {
+                left: 0;
+                right: auto;
+            }
+
+            .pagination {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .pager {
+                justify-content: space-between;
+                gap: 4px;
+            }
+
+            .page-numbers {
+                flex: 1;
+                justify-content: center;
+                min-width: 0;
+            }
+
+            .page-btn {
+                min-width: 28px;
+                padding: 0 4px;
+            }
+
+            .pager > .page-btn:first-child,
+            .pager > .page-btn:last-child {
+                min-width: 30px;
+                padding: 0;
+                font-size: 0;
+            }
+
+            .pager > .page-btn:first-child::before {
+                content: '‹';
+                font-size: 18px;
+                line-height: 1;
+            }
+
+            .pager > .page-btn:last-child::before {
+                content: '›';
+                font-size: 18px;
+                line-height: 1;
+            }
+
+            .notification {
+                left: 12px;
+                right: 12px;
+                top: 12px;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 22px;
+            }
+
+            .eyebrow {
+                font-size: 10px;
+            }
+
+            .hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-head">
+            <div class="eyebrow">File Share · LAN</div>
+            <h1>局域网文件共享</h1>
+            <p class="subtitle">拖拽上传，复制链接或扫码即可在局域网内分享文件。文件只保存在本机。</p>
+        </header>
+
+        <section class="card share-card">
+            <div class="card-head">
+                <h2 class="card-title">分享地址</h2>
+                <span class="hint">鼠标悬停按钮查看二维码</span>
+            </div>
+            <div class="share-row">
+                <input type="text" class="share-link" id="shareLink" readonly aria-label="分享地址">
+                <div class="qrcode-container">
+                    <button type="button" class="btn btn-primary" id="copyShareBtn">
+                        <span class="btn-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                        </span>
+                        <span>复制链接</span>
+                    </button>
+                    <div class="qrcode-popup">
+                        <canvas class="qrcode-img" id="shareQrcode"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card upload-card">
+            <label class="drop-zone" id="dropZone">
+                <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                <span class="drop-title">拖拽文件到这里上传</span>
+                <span class="drop-hint">或点击选择文件，支持一次选择多个</span>
+                <input type="file" class="file-input" id="fileInput" multiple>
+            </label>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">上传中…</div>
+            </div>
+        </section>
+
+        <section class="card files-card">
+            <div class="files-head">
+                <div class="files-title">
+                    <h2>文件列表</h2>
+                    <span class="count" id="filesCount">共 0 个文件</span>
+                </div>
+                <button type="button" class="btn btn-ghost-danger" id="clearBtn">
+                    <span class="btn-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="m6 7 1 12h10l1-12"/></svg>
+                    </span>
+                    <span>清空全部</span>
+                </button>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <input type="search" id="searchInput" placeholder="搜索文件名…" autocomplete="off" aria-label="搜索文件名">
+                </div>
+                <label class="page-size">
+                    每页
+                    <select id="pageSizeSelect" aria-label="每页显示数量">
+                        <option value="10">10 个</option>
+                        <option value="20">20 个</option>
+                        <option value="50">50 个</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="file-table">
+                <div class="file-head">
+                    <span>名称</span>
+                    <span>大小</span>
+                    <span>修改时间</span>
+                    <span class="head-actions">操作</span>
+                </div>
+                <div id="filesList"></div>
+            </div>
+
+            <div class="pagination" id="pagination" hidden>
+                <span id="paginationInfo"></span>
+                <div class="pager" id="pager"></div>
+            </div>
+        </section>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        const ICONS = {
+            download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
+            share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66L11 7"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66L13 17"/></svg>',
+            trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="m6 7 1 12h10l1-12"/></svg>'
+        };
+
+        const EXT_TONES = {
+            doc: ['doc', 'docx', 'pdf', 'txt', 'md', 'rtf', 'odt', 'pages'],
+            image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico', 'heic'],
+            media: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'mp4', 'avi', 'mkv', 'mov', 'webm', 'wmv'],
+            archive: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
+            code: ['js', 'ts', 'py', 'html', 'css', 'json', 'yml', 'yaml', 'sh', 'ps1', 'java', 'go', 'rs', 'c', 'cpp', 'h']
+        };
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const filesList = document.getElementById('filesList');
+        const filesCount = document.getElementById('filesCount');
+        const searchInput = document.getElementById('searchInput');
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const clearBtn = document.getElementById('clearBtn');
+        const pagination = document.getElementById('pagination');
+        const paginationInfo = document.getElementById('paginationInfo');
+        const pager = document.getElementById('pager');
+        const notification = document.getElementById('notification');
+        const shareLink = document.getElementById('shareLink');
+        const copyShareBtn = document.getElementById('copyShareBtn');
+
+        const state = {
+            files: [],
+            query: '',
+            page: 1,
+            pageSize: 10
+        };
+
+        let serverUrlPromise = null;
+        let searchTimer = null;
+        let notificationTimer = null;
+
+        /** 获取服务器实际 URL，只请求一次。 */
+        function getServerUrl() {
+            if (!serverUrlPromise) {
+                serverUrlPromise = fetch('/api/v1/server-info')
+                    .then((response) => response.json())
+                    .then((data) => data.server_url || window.location.origin)
+                    .catch(() => window.location.origin);
+            }
+            return serverUrlPromise;
+        }
+
+        function fileUrl(serverUrl, filename) {
+            return `${serverUrl}/api/v1/download/${encodeURIComponent(filename)}`;
+        }
+
+        getServerUrl().then((serverUrl) => {
+            shareLink.value = serverUrl;
+        });
+
+        function generateShareQrcode() {
+            const canvas = document.getElementById('shareQrcode');
+            if (!canvas) return;
+            getServerUrl().then((serverUrl) => {
+                QRCode.toCanvas(canvas, serverUrl, { width: 120, margin: 1 });
+            });
+        }
+
+        async function copyWithFallback(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (error) {
+                    console.warn('剪贴板 API 不可用，尝试备用方式', error);
+                }
+            }
+
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.setAttribute('readonly', '');
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+
+            try {
+                return document.execCommand('copy');
+            } catch (error) {
+                console.error('复制失败', error);
+                return false;
+            } finally {
+                textArea.remove();
+            }
+        }
+
+        async function copyShareLink() {
+            const serverUrl = await getServerUrl();
+            shareLink.value = serverUrl;
+
+            const copied = await copyWithFallback(serverUrl);
+            showNotification(copied ? '链接已复制到剪贴板' : '复制失败，请手动复制', copied ? 'success' : 'error');
+        }
+
+        async function copyFileLink(filename) {
+            const serverUrl = await getServerUrl();
+            const copied = await copyWithFallback(fileUrl(serverUrl, filename));
+            showNotification(copied ? '文件链接已复制' : '复制失败，请手动复制', copied ? 'success' : 'error');
+        }
+
+        function createIconButton(label, icon, className, handler) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `btn ${className}`;
+
+            if (icon) {
+                const iconWrap = document.createElement('span');
+                iconWrap.className = 'btn-icon';
+                iconWrap.innerHTML = icon;
+                button.appendChild(iconWrap);
+            }
+
+            const text = document.createElement('span');
+            text.textContent = label;
+            button.appendChild(text);
+            button.addEventListener('click', handler);
+            return button;
+        }
+
+        function getExtension(filename) {
+            const base = filename.split('/').pop() || filename;
+            const dot = base.lastIndexOf('.');
+            if (dot <= 0 || dot === base.length - 1) return '';
+            return base.slice(dot + 1).toLowerCase();
+        }
+
+        function getBadgeLabel(filename) {
+            const ext = getExtension(filename);
+            if (!ext) return 'FILE';
+            return ext.slice(0, 4).toUpperCase();
+        }
+
+        function getBadgeClass(filename) {
+            const ext = getExtension(filename);
+            for (const [tone, extensions] of Object.entries(EXT_TONES)) {
+                if (extensions.includes(ext)) return `badge-${tone}`;
+            }
+            return '';
+        }
+
+        function createFileRow(file) {
+            const row = document.createElement('div');
+            row.className = 'file-row';
+
+            const nameCell = document.createElement('div');
+            nameCell.className = 'file-name-cell';
+
+            const badge = document.createElement('span');
+            badge.className = `file-badge ${getBadgeClass(file.name)}`.trim();
+            badge.textContent = getBadgeLabel(file.name);
+
+            const nameText = document.createElement('div');
+            nameText.className = 'file-name-text';
+
+            const label = document.createElement('div');
+            label.className = 'file-label';
+            label.textContent = file.name;
+            label.title = file.name;
+
+            const sub = document.createElement('div');
+            sub.className = 'file-sub';
+            sub.textContent = `${formatFileSize(file.size)} · ${formatDate(file.modified)}`;
+
+            nameText.append(label, sub);
+            nameCell.append(badge, nameText);
+
+            const size = document.createElement('span');
+            size.className = 'file-size';
+            size.textContent = formatFileSize(file.size);
+
+            const date = document.createElement('span');
+            date.className = 'file-date';
+            date.textContent = formatDate(file.modified);
+
+            const actions = document.createElement('div');
+            actions.className = 'file-actions';
+
+            actions.append(
+                createIconButton('下载', ICONS.download, 'btn-sm btn-download', () => downloadFile(file.name)),
+                createShareAction(file),
+                createIconButton('删除', ICONS.trash, 'btn-sm btn-delete', () => deleteFile(file.name))
+            );
+
+            row.append(nameCell, size, date, actions);
+            return row;
+        }
+
+        function createShareAction(file) {
+            const container = document.createElement('div');
+            container.className = 'qrcode-container';
+
+            let qrReady = false;
+            const popup = document.createElement('div');
+            popup.className = 'qrcode-popup';
+
+            const canvas = document.createElement('canvas');
+            canvas.className = 'qrcode-img';
+            popup.append(canvas);
+
+            const ensureQr = () => {
+                if (qrReady) return;
+                qrReady = true;
+                getServerUrl().then((serverUrl) => {
+                    try {
+                        QRCode.toCanvas(canvas, fileUrl(serverUrl, file.name), { width: 120, margin: 1 });
+                    } catch (error) {
+                        qrReady = false;
+                        console.error('生成二维码失败', error);
+                    }
+                });
+            };
+
+            const button = createIconButton('分享', ICONS.share, 'btn-sm btn-share', () => {
+                ensureQr();
+                copyFileLink(file.name);
+            });
+
+            container.addEventListener('mouseenter', ensureQr);
+            container.addEventListener('focusin', ensureQr);
+            container.append(button, popup);
+            return container;
+        }
+
+        function createEmptyState(title, hint, actionButton) {
+            const box = document.createElement('div');
+            box.className = 'empty-state';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'empty-title';
+            titleEl.textContent = title;
+
+            const hintEl = document.createElement('div');
+            hintEl.className = 'empty-hint';
+            hintEl.textContent = hint;
+
+            box.append(titleEl, hintEl);
+            if (actionButton) box.appendChild(actionButton);
+            return box;
+        }
+
+        function getVisibleFiles() {
+            const query = state.query.trim().toLowerCase();
+            if (!query) return state.files;
+            return state.files.filter((file) => file.name.toLowerCase().includes(query));
+        }
+
+        function renderFiles() {
+            const visible = getVisibleFiles();
+            const totalPages = Math.max(1, Math.ceil(visible.length / state.pageSize));
+            if (state.page > totalPages) state.page = totalPages;
+
+            const start = (state.page - 1) * state.pageSize;
+            const pageFiles = visible.slice(start, start + state.pageSize);
+
+            clearBtn.disabled = state.files.length === 0;
+
+            if (state.files.length === 0) {
+                filesCount.textContent = '共 0 个文件';
+            } else if (visible.length === state.files.length) {
+                filesCount.textContent = `共 ${state.files.length} 个文件`;
+            } else {
+                filesCount.textContent = `找到 ${visible.length} 个 / 共 ${state.files.length} 个`;
+            }
+
+            filesList.replaceChildren();
+
+            if (state.files.length === 0) {
+                filesList.appendChild(
+                    createEmptyState('还没有文件', '拖拽或点击上方区域上传第一个文件。', null)
+                );
+                renderPagination(0, 0, 0);
+                return;
+            }
+
+            if (visible.length === 0) {
+                const clearSearch = createIconButton('清除搜索', '', 'btn-ghost', () => {
+                    searchInput.value = '';
+                    state.query = '';
+                    state.page = 1;
+                    renderFiles();
+                    searchInput.focus();
+                });
+                filesList.appendChild(
+                    createEmptyState(`没有匹配「${state.query.trim()}」的文件`, '换个关键词试试。', clearSearch)
+                );
+                renderPagination(0, 0, 0);
+                return;
+            }
+
+            pageFiles.forEach((file) => filesList.appendChild(createFileRow(file)));
+            renderPagination(totalPages, visible.length, start);
+        }
+
+        function pageWindow(current, total) {
+            if (total <= 7) {
+                return Array.from({ length: total }, (_, index) => index + 1);
+            }
+
+            const candidates = [1, total, current - 1, current, current + 1].filter(
+                (page) => page >= 1 && page <= total
+            );
+            const unique = [...new Set(candidates)].sort((a, b) => a - b);
+            const result = [];
+
+            unique.forEach((page, index) => {
+                if (index > 0 && page - unique[index - 1] > 1) result.push('...');
+                result.push(page);
+            });
+
+            return result;
+        }
+
+        function createPageButton(label, disabled, handler, isCurrent = false) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `page-btn${isCurrent ? ' is-current' : ''}`;
+            button.textContent = label;
+            button.disabled = disabled;
+            if (isCurrent) button.setAttribute('aria-current', 'page');
+            button.addEventListener('click', handler);
+            return button;
+        }
+
+        function renderPagination(totalPages, visibleCount, start) {
+            if (totalPages <= 1) {
+                pagination.hidden = true;
+                paginationInfo.textContent = '';
+                pager.replaceChildren();
+                return;
+            }
+
+            pagination.hidden = false;
+            paginationInfo.textContent =
+                `第 ${state.page} / ${totalPages} 页 · ${start + 1}–${Math.min(start + state.pageSize, visibleCount)} / ${visibleCount} 个文件`;
+
+            pager.replaceChildren();
+            const pageNumbers = document.createElement('div');
+            pageNumbers.className = 'page-numbers';
+
+            pager.append(
+                createPageButton('上一页', state.page === 1, () => {
+                    state.page -= 1;
+                    renderFiles();
+                })
+            );
+
+            for (const item of pageWindow(state.page, totalPages)) {
+                if (item === '...') {
+                    const gap = document.createElement('span');
+                    gap.className = 'page-gap';
+                    gap.textContent = '…';
+                    pageNumbers.appendChild(gap);
+                    continue;
+                }
+
+                pageNumbers.appendChild(
+                    createPageButton(String(item), false, () => {
+                        state.page = item;
+                        renderFiles();
+                    }, item === state.page)
+                );
+            }
+
+            pager.append(
+                pageNumbers,
+                createPageButton('下一页', state.page === totalPages, () => {
+                    state.page += 1;
+                    renderFiles();
+                })
+            );
+        }
+
+        async function readError(response, fallback) {
+            try {
+                const data = await response.json();
+                return data.detail || fallback;
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/v1/files', { cache: 'no-store' });
+                if (!response.ok) throw new Error(await readError(response, '加载文件列表失败'));
+
+                const data = await response.json();
+                const files = Array.isArray(data.files) ? data.files : [];
+                state.files = files.sort((a, b) => b.modified - a.modified);
+                renderFiles();
+            } catch (error) {
+                console.error('加载文件列表失败', error);
+                showNotification(error.message || '加载文件列表失败', 'error');
+            }
+        }
+
+        async function uploadFile(file, index, total) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            progressContainer.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent =
+                total > 1 ? `正在上传 ${index + 1}/${total}：${file.name}` : `正在上传：${file.name}`;
+
+            try {
+                const response = await fetch('/api/v1/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(await readError(response, '上传失败'));
+
+                progressFill.style.width = '100%';
+                progressText.textContent = `已上传：${file.name}`;
+                showNotification(`已上传 ${file.name}`, 'success');
+                return true;
+            } catch (error) {
+                progressText.textContent = '上传失败';
+                showNotification(error.message || '文件上传失败', 'error');
+                return false;
+            }
+        }
+
+        async function uploadFiles(files) {
+            for (let index = 0; index < files.length; index += 1) {
+                await uploadFile(files[index], index, files.length);
+            }
+
+            await loadFiles();
+            fileInput.value = '';
+
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 1500);
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes <= 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const index = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+            const value = bytes / Math.pow(k, index);
+            return `${index === 0 ? value : value.toFixed(value >= 10 ? 1 : 2)} ${sizes[index]}`;
+        }
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp * 1000);
+            if (Number.isNaN(date.getTime())) return '—';
+
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 0) {
+                return formatAbsoluteDate(date);
+            }
+
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (seconds < 60) return '刚刚';
+            if (minutes < 60) return `${minutes} 分钟前`;
+            if (hours < 24) return `${hours} 小时前`;
+            if (days < 7) return `${days} 天前`;
+            return formatAbsoluteDate(date);
+        }
+
+        function formatAbsoluteDate(date) {
+            const pad = (value) => String(value).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        }
+
+        function downloadFile(filename) {
+            window.location.href = `/api/v1/download/${encodeURIComponent(filename)}`;
+        }
+
+        async function deleteFile(filename) {
+            if (!confirm(`确定要删除 "${filename}" 吗？`)) return;
+
+            try {
+                const response = await fetch(`/api/v1/files/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error(await readError(response, '删除失败'));
+
+                showNotification('文件已删除', 'success');
+                await loadFiles();
+            } catch (error) {
+                showNotification(error.message || '文件删除失败', 'error');
+            }
+        }
+
+        async function clearAllFiles() {
+            if (state.files.length === 0) {
+                showNotification('没有文件可以清空', 'error');
+                return;
+            }
+
+            if (!confirm('确定要清空所有文件吗？此操作不可恢复。')) return;
+
+            try {
+                const response = await fetch('/api/v1/files', { method: 'DELETE' });
+                if (!response.ok) throw new Error(await readError(response, '清空失败'));
+
+                const data = await response.json();
+                showNotification(`已清空 ${data.count} 个文件`, 'success');
+                state.page = 1;
+                await loadFiles();
+            } catch (error) {
+                showNotification(error.message || '清空文件失败', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            clearTimeout(notificationTimer);
+            notificationTimer = setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3200);
+        }
+
+        copyShareBtn.addEventListener('click', copyShareLink);
+        clearBtn.addEventListener('click', clearAllFiles);
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                state.query = searchInput.value;
+                state.page = 1;
+                renderFiles();
+            }, 150);
+        });
+
+        searchInput.addEventListener('search', () => {
+            clearTimeout(searchTimer);
+            state.query = searchInput.value;
+            state.page = 1;
+            renderFiles();
+        });
+
+        pageSizeSelect.addEventListener('change', () => {
+            state.pageSize = Number(pageSizeSelect.value) || 10;
+            state.page = 1;
+            renderFiles();
+        });
+
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            dropZone.addEventListener(eventName, (event) => {
+                event.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        dropZone.addEventListener('dragleave', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('dragover');
+
+            const files = event.dataTransfer && event.dataTransfer.files;
+            if (files && files.length > 0) uploadFiles(files);
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files && fileInput.files.length > 0) {
+                uploadFiles(fileInput.files);
+            }
+        });
+
+        generateShareQrcode();
+        loadFiles();
+    </script>
+</body>
+</html>

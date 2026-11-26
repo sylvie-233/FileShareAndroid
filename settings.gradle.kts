@@ -30,3 +30,4 @@ dependencyResolutionManagement {
 rootProject.name = "FileShare"
 
 include(":core:model")
+include(":core:common")

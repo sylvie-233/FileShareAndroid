@@ -28,3 +28,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "FileShare"
+
+include(":core:model")

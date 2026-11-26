@@ -2,7 +2,7 @@ package com.fileshare.lan.feature.share.di
 
 import com.fileshare.lan.feature.share.ShareViewModel
 import org.koin.android.ext.koin.androidContext
-import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val shareModule = module {

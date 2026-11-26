@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,7 +38,7 @@ class SettingsViewModel(
     val saveDirLabel: StateFlow<String> = settingsRepository.settings
         .map { it.saveDirUri }
         .distinctUntilChanged()
-        .mapLatest { uri ->
+        .map { uri ->
             withContext(Dispatchers.IO) {
                 runCatching { storageProvider.forUri(uri).displayPath }.getOrDefault("")
             }

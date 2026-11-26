@@ -10,22 +10,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,13 +28,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -53,6 +44,10 @@ import com.fileshare.lan.core.designsystem.component.SegmentedOptions
 import com.fileshare.lan.core.designsystem.component.SettingSwitchRow
 import com.fileshare.lan.core.designsystem.theme.AppColors
 import com.fileshare.lan.core.model.AppSettings
+import com.fileshare.lan.feature.settings.component.PermissionRow
+import com.fileshare.lan.feature.settings.component.RowDivider
+import com.fileshare.lan.feature.settings.component.SettingRowWithControl
+import com.fileshare.lan.feature.settings.component.ValueRow
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -184,7 +179,7 @@ fun SettingsScreen(
                     color = AppColors.Accent,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .clickable { viewModel.setSaveDir(null) }
                         .padding(vertical = 6.dp, horizontal = 2.dp),
                 )
@@ -248,100 +243,5 @@ fun SettingsScreen(
                 .padding(top = 22.dp, bottom = 8.dp),
         )
         Spacer(Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun RowDivider() {
-    HorizontalDivider(
-        color = AppColors.Border,
-        modifier = Modifier.padding(vertical = 13.dp),
-    )
-}
-
-@Composable
-private fun SettingRowWithControl(
-    title: String,
-    description: String,
-    control: @Composable () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = AppColors.Ink)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.labelSmall, color = AppColors.Faint)
-        }
-        control()
-    }
-}
-
-@Composable
-private fun ValueRow(
-    title: String,
-    description: String,
-    hint: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = AppColors.Ink)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.labelSmall, color = AppColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(hint, style = MaterialTheme.typography.labelSmall, color = AppColors.Faint)
-        }
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = AppColors.Faint,
-            modifier = Modifier.size(18.dp),
-        )
-    }
-}
-
-@Composable
-private fun PermissionRow(
-    title: String,
-    description: String,
-    granted: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = AppColors.Ink)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.labelSmall, color = AppColors.Faint)
-        }
-        Text(
-            text = if (granted) "已授予" else "去设置",
-            style = MaterialTheme.typography.labelMedium,
-            color = if (granted) AppColors.Green else AppColors.Accent,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = AppColors.Faint,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }

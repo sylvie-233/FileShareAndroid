@@ -281,7 +281,7 @@ class ShareServer(
                     }
                 }
             } finally {
-                part.dispose()
+                part.release()
             }
         }
 

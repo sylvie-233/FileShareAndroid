@@ -40,7 +40,6 @@ data class FilesUiState(
     val pageCount: Int = 1,
     val query: String = "",
     val loading: Boolean = true,
-    val saveDirLabel: String = "",
     val uploads: List<UploadTask> = emptyList(),
     val storageError: String? = null,
 )
@@ -65,7 +64,6 @@ class FilesViewModel(
     private var currentPage = 1
     private var importTask: UploadTask? = null
     private var serverUploads: List<UploadTask> = emptyList()
-    private var saveDirLabel = ""
     private var queryDebounceJob: Job? = null
 
     init {
@@ -75,17 +73,6 @@ class FilesViewModel(
                 refreshTrigger,
             ) { uri, _ -> uri }
                 .collectLatest { uri -> reload(uri) }
-        }
-        viewModelScope.launch {
-            settingsRepository.settings
-                .map { it.saveDirUri }
-                .distinctUntilChanged()
-                .collectLatest { uri ->
-                    saveDirLabel = withContext(Dispatchers.IO) {
-                        runCatching { storageProvider.forUri(uri).displayPath }.getOrDefault("")
-                    }
-                    render()
-                }
         }
         viewModelScope.launch {
             controller.uploads.collect { uploads ->
@@ -159,6 +146,26 @@ class FilesViewModel(
     fun downloadUrlFor(file: SharedFile): String? {
         val info = (controller.state.value as? ServerState.Running)?.info ?: return null
         return "${info.url}/api/v1/download/${encodePathSegment(file.name)}"
+    }
+
+    /** 下载到本机：把共享文件另存到用户通过系统保存面板选择的位置。 */
+    fun exportFile(file: SharedFile, targetUri: Uri) {
+        viewModelScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    val settings = settingsRepository.current()
+                    val source = storageProvider.current(settings).openRead(file.name)
+                        ?: throw IOException("文件不存在")
+                    val target = appContext.contentResolver.openOutputStream(targetUri)
+                        ?: throw IOException("无法写入所选位置")
+                    source.use { input ->
+                        target.use { output -> input.copyTo(output) }
+                    }
+                }
+            }
+            result.onSuccess { _messages.tryEmit("已保存 ${file.name}") }
+                .onFailure { _messages.tryEmit(it.message ?: "保存失败") }
+        }
     }
 
     fun importDocument(uri: Uri) {
@@ -243,7 +250,6 @@ class FilesViewModel(
                 totalCount = filtered.size,
                 page = currentPage,
                 pageCount = pageCount,
-                saveDirLabel = saveDirLabel,
                 uploads = activeUploads,
             )
         }
